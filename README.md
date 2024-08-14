@@ -1,9 +1,9 @@
-# Quarkus Tools for IntelliJ
+<h1><img src="https://raw.githubusercontent.com/redhat-developer/intellij-quarkus/master/src/main/resources/quarkus_icon_rgb_32px_default.png" /> Quarkus Tools for IntelliJ</h1>
+
 [plugin-repo]: https://plugins.jetbrains.com/plugin/13234-quarkus
 [plugin-version-svg]: https://img.shields.io/jetbrains/plugin/v/13234-quarkus.svg
 [plugin-downloads-svg]: https://img.shields.io/jetbrains/plugin/d/13234-quarkus.svg
-
-![Java CI with Gradle](https://github.com/redhat-developer/intellij-quarkus/workflows/Java%20CI%20with%20Gradle/badge.svg)
+[![Java CI with Gradle](https://github.com/redhat-developer/intellij-quarkus/actions/workflows/ci.yml/badge.svg)](https://github.com/redhat-developer/intellij-quarkus/actions/workflows/ci.yml)
 ![Validate against IJ versions](https://github.com/redhat-developer/intellij-quarkus/workflows/Validate%20against%20IJ%20versions/badge.svg)
 [![JetBrains plugins][plugin-version-svg]][plugin-repo]
 [![JetBrains plugins][plugin-downloads-svg]][plugin-repo]
@@ -11,9 +11,17 @@
 
 
 ## Description
+<!-- Plugin description -->
+A plugin aimed at Quarkus based development, providing easy bootstrapping and code assist from [Quarkus](https://quarkus.io/) related assets and [Qute](https://quarkus.io/guides/qute-reference).
 
-This JetBrains IntelliJ plugin provides support for Quarkus development via a 
-[Quarkus language server](https://github.com/redhat-developer/quarkus-ls/tree/master/microprofile.ls).
+To provide those support, the plugin consumes:
+
+ * [MicroProfile Language Server](https://github.com/eclipse/lsp4mp/tree/master/microprofile.ls) 
+ * [Qute Language Server](https://github.com/redhat-developer/quarkus-ls/tree/master/qute.ls) 
+
+by using [LSP4IJ (Language Server Protocol for Intellij)](https://github.com/redhat-developer/lsp4ij).
+
+<!-- Plugin description end -->
 
 ### application.properties support
 
@@ -174,7 +182,7 @@ The [Qute templating engine](https://quarkus.io/guides/qute-reference) is suppor
 
 ## Quarkus project wizards
 
-Generate a Quarkus Maven project, based on https://code.quarkus.io/. Call `File -> New -> Module -> Quarkus`. It is possible to filter the list of displayed Quarkus extension by name pattern and allow or disallow the inclusion of non platforms Quarkus extensions.
+Generate a Quarkus Maven project, based on https://code.quarkus.io/. Call `File > New > Module > Quarkus`. It is possible to filter the list of displayed Quarkus extension by name pattern and allow or disallow the inclusion of non platforms Quarkus extensions.
 
 ![](images/1.12.0/quarkus-tools2.gif)
 
@@ -229,8 +237,8 @@ When editing `application.properties` files, you have access to:
 
 ## Requirements
 
-  * Intellij IDEA 2022.2 or more recent (we **try** to support the last 4 major IDEA releases)
-  * Java JDK (or JRE) 11 or more recent
+  * Intellij IDEA 2023.2 or more recent (we **try** to support the last 4 major IDEA releases)
+  * Java JDK (or JRE) 17 or more recent
 
     ​    
 ## Contributing
@@ -268,10 +276,10 @@ So we extracted these classes into the ```intellij-community``` folder. But as t
 classes are highly linked to the version of the IntelliJ SDK used to build, there is
 a script to copy them from the GitHub intellij-community repository.
 
-This script is ```pulltest.sh```
+This script is ```pull_intellij_tests```
 
 If the version of the IntelliJ SDK used to build is changed (see gradle.properties), you must
-update the branch in ```pulltest.sh``` and run the script again.
+update the branch in ```pull_intellij_tests``` and run the script again.
 
 #### UI testing
 
@@ -280,19 +288,46 @@ You can perform UI testing by running the following command:
 ```sh
 ./gradlew integrationTest 
 ```
+#### Testing nightly builds
+
+You can easily install nightly builds from the nightly channel:
+
+- in IntelliJ, open `Setting > Plugins > [Gear icon] > Manage Plugin Repositories...`
+- Add `https://plugins.jetbrains.com/plugins/nightly/13234` and press `OK`
+<img alt="Nightly Channel Repository" src="images/nightly-channel-repo.png" width="500px" />
+- install the latest `Quarkus Tools` version
+
+Nightly builds are published once a day.
+
+
 #### Testing the CI builds
 
-You can download and install CI builds of the latest commits or a pull request:
+You can also download and install CI builds of the latest commits or a specific pull request:
 
 - open the [`Build plugin zip` workflow](https://github.com/redhat-developer/intellij-quarkus/actions/workflows/buildZip.yml)
 - click on the build you are interested in
 - scroll down and download the `Quarkus Tools <version>.zip` file
-- the file is [zipped twice](https://github.com/actions/upload-artifact/issues/39), you need to unzip it once
-- install the newly decompressed `Quarkus Tools <version>.zip` into IntelliJ IDEA by following these [instructions](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk).
+- install `Quarkus Tools <version>.zip` into IntelliJ IDEA by following these [instructions](https://www.jetbrains.com/help/idea/managing-plugins.html#install_plugin_from_disk).
 
 Data and Telemetry
 ==================
 The JetBrains IntelliJ Quarkus Tools plugin collects anonymous [usage data](USAGE_DATA.md) and sends it to Red Hat servers to help improve our products and services. Read our [privacy statement](https://developers.redhat.com/article/tool-data-collection) to learn more. This extension respects the Red Hat Telemetry setting which you can learn more about at [https://github.com/redhat-developer/intellij-redhat-telemetry#telemetry-reporting](https://github.com/redhat-developer/intellij-redhat-telemetry#telemetry-reporting)
+
+## Articles
+
+ * [A recap of Quarkus Tools for IntelliJ's latest improvements](https://quarkus.io/blog/intellij-quarkus-recap/)
+ * [Quarkus Tools for IntelliJ 1.14.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.14.0/)
+ * [Quarkus Tools for IntelliJ 1.13.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.13.0/)
+ * [Quarkus Tools for IntelliJ 1.12.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.12.0/)
+ * [Quarkus Tools for IntelliJ 1.11.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.11.0/)
+ * [Quarkus Tools for IntelliJ 1.10.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.10.0/)
+ * [Quarkus Tools for IntelliJ 1.9.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.9.0/)
+ * [Quarkus Tools for IntelliJ 1.8.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.8.0/)
+ * [Quarkus Tools for IntelliJ 1.4.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.4.0/)
+ * [Quarkus Tools for IntelliJ 1.3.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.3.0/)
+ * [Quarkus Tools for IntelliJ 1.2.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.2.0/)
+ * [Quarkus Tools for IntelliJ 1.1.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.1.0/)
+ * [Quarkus Tools for IntelliJ 1.0.0 released!](https://quarkus.io/blog/intellij-quarkus-tools-1.0.0/)
 
 ## Feedback
 

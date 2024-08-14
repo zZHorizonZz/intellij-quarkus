@@ -10,13 +10,7 @@
  ******************************************************************************/
 package com.redhat.devtools.intellij.quarkus.run;
 
-import com.intellij.execution.DefaultExecutionTarget;
-import com.intellij.execution.ExecutionException;
-import com.intellij.execution.ExecutionManager;
-import com.intellij.execution.ExecutionTarget;
-import com.intellij.execution.Executor;
-import com.intellij.execution.RunManager;
-import com.intellij.execution.RunnerAndConfigurationSettings;
+import com.intellij.execution.*;
 import com.intellij.execution.configurations.ConfigurationFactory;
 import com.intellij.execution.configurations.ModuleBasedConfiguration;
 import com.intellij.execution.configurations.RunConfiguration;
@@ -42,7 +36,7 @@ import com.intellij.openapi.ui.Messages;
 import com.redhat.devtools.intellij.quarkus.QuarkusConstants;
 import com.redhat.devtools.intellij.quarkus.QuarkusModuleUtil;
 import com.redhat.devtools.intellij.quarkus.TelemetryService;
-import com.redhat.devtools.intellij.quarkus.tool.ToolDelegate;
+import com.redhat.devtools.intellij.quarkus.buildtool.BuildToolDelegate;
 import com.redhat.devtools.intellij.telemetry.core.service.TelemetryMessageBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -98,7 +92,7 @@ public class QuarkusRunConfiguration extends ModuleBasedConfiguration<RunConfigu
         if (!QuarkusModuleUtil.isQuarkusModule(module)) {
             throw new RuntimeConfigurationException("Not a Quarkus module", QUARKUS_CONFIGURATION);
         }
-        ToolDelegate delegate = ToolDelegate.getDelegate(module);
+        BuildToolDelegate delegate = BuildToolDelegate.getDelegate(module);
         if (delegate == null) {
             throw new RuntimeConfigurationException("Can't find a tool to process the module", QUARKUS_CONFIGURATION);
         }
@@ -131,14 +125,16 @@ public class QuarkusRunConfiguration extends ModuleBasedConfiguration<RunConfigu
     public RunProfileState getState(@NotNull Executor executor, @NotNull ExecutionEnvironment environment) throws ExecutionException {
         TelemetryMessageBuilder.ActionMessage telemetry = TelemetryService.instance().action(TelemetryService.RUN_PREFIX + "run");
         telemetry.property("kind", executor.getId());
-        ToolDelegate toolDelegate = ToolDelegate.getDelegate(getModule());
+        BuildToolDelegate toolDelegate = BuildToolDelegate.getDelegate(getModule());
         allocateLocalPort();
+        RunProfileState state = null;
         if (toolDelegate != null) {
             telemetry.property("tool", toolDelegate.getDisplay());
+            // Create a Gradle or Maven run configuration in memory
             RunnerAndConfigurationSettings settings = toolDelegate.getConfigurationDelegate(getModule(), this);
             if (settings != null) {
                 long groupId = ExecutionEnvironment.getNextUnusedExecutionId();
-                doRunConfiguration(settings, executor, DefaultExecutionTarget.INSTANCE, groupId, null,
+                state = doRunConfiguration(settings, executor, DefaultExecutionTarget.INSTANCE, groupId, null,
                         desc -> desc.getComponent().putClientProperty(QuarkusConstants.QUARKUS_RUN_CONTEXT_KEY, new QuarkusRunContext(getModule())));
             }
         } else {
@@ -153,7 +149,7 @@ public class QuarkusRunConfiguration extends ModuleBasedConfiguration<RunConfigu
                 }
             });
         }
-        return null;
+        return state;
     }
 
     private void waitForPortAvailable(int port, ProgressIndicator monitor) throws IOException {
@@ -212,21 +208,19 @@ public class QuarkusRunConfiguration extends ModuleBasedConfiguration<RunConfigu
         return port;
     }
 
-    private static void doRunConfiguration(@NotNull RunnerAndConfigurationSettings configuration,
-                                          @NotNull Executor executor,
-                                          @Nullable ExecutionTarget targetOrNullForDefault,
-                                          @Nullable Long executionId,
-                                          @Nullable DataContext dataContext,
-                                           ProgramRunner.Callback callback) {
+    private static RunProfileState doRunConfiguration(@NotNull RunnerAndConfigurationSettings configuration,
+                                                      @NotNull Executor executor,
+                                                      @Nullable ExecutionTarget targetOrNullForDefault,
+                                                      @Nullable Long executionId,
+                                                      @Nullable DataContext dataContext,
+                                                      ProgramRunner.Callback callback) throws ExecutionException {
         ExecutionEnvironmentBuilder builder = createEnvironment(executor, configuration);
         if (builder == null) {
-            return;
+            return null;
         }
-
         if (targetOrNullForDefault != null) {
             builder.target(targetOrNullForDefault);
-        }
-        else {
+        } else {
             builder.activeTarget();
         }
         if (executionId != null) {
@@ -235,7 +229,7 @@ public class QuarkusRunConfiguration extends ModuleBasedConfiguration<RunConfigu
         if (dataContext != null) {
             builder.dataContext(dataContext);
         }
-        ExecutionManager.getInstance(configuration.getConfiguration().getProject()).restartRunProfile(builder.build(callback));
+        return configuration.getConfiguration().getState(executor, builder.build(callback));
     }
 
 }

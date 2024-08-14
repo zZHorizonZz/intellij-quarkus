@@ -13,8 +13,8 @@ package com.redhat.devtools.intellij.qute.lsp;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.redhat.devtools.intellij.lsp4ij.AbstractDocumentMatcher;
-import com.redhat.devtools.intellij.lsp4ij.LSPIJUtils;
+import com.redhat.devtools.lsp4ij.AbstractDocumentMatcher;
+import com.redhat.devtools.lsp4ij.LSPIJUtils;
 import com.redhat.devtools.intellij.qute.psi.utils.PsiQuteProjectUtils;
 
 /**
@@ -24,7 +24,7 @@ public class AbstractQuteDocumentMatcher extends AbstractDocumentMatcher {
 
     @Override
     public boolean match(VirtualFile file, Project fileProject) {
-        Module module = LSPIJUtils.getModule(file);
+        Module module = LSPIJUtils.getModule(file, fileProject);
         return module != null && PsiQuteProjectUtils.hasQuteSupport(module);
     }
 }

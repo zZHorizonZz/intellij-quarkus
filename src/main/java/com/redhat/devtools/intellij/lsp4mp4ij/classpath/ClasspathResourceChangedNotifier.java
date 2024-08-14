@@ -14,11 +14,9 @@
 package com.redhat.devtools.intellij.lsp4mp4ij.classpath;
 
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.Application;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
@@ -26,16 +24,20 @@ import com.intellij.openapi.roots.libraries.Library;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Source file change notifier with a debounce mode.
  */
 public class ClasspathResourceChangedNotifier implements Disposable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClasspathResourceChangedNotifier.class);
 
     private static final long DEBOUNCE_DELAY = 1000;
 
@@ -46,12 +48,10 @@ public class ClasspathResourceChangedNotifier implements Disposable {
 
     private final Set<Pair<VirtualFile, Module>> sourceFiles;
     private boolean librariesChanged;
-    private final List<RunnableProgress> processBeforeLibrariesChanged;
     private boolean disposed;
 
-    public ClasspathResourceChangedNotifier(Project project, List<RunnableProgress> preprocessors) {
+    public ClasspathResourceChangedNotifier(Project project) {
         this.project = project;
-        this.processBeforeLibrariesChanged = preprocessors;
         sourceFiles = new HashSet<>();
     }
 
@@ -84,7 +84,12 @@ public class ClasspathResourceChangedNotifier implements Disposable {
             debounceTask = new TimerTask() {
                 @Override
                 public void run() {
-                    notifyChanges();
+                    try {
+                        notifyChanges();
+                    } catch (Throwable t) {
+                        //Need to catch time task exceptions, or it will cancel the timer
+                        LOGGER.error("Failed to notify classpath resource change", t);
+                    }
                 }
             };
 
@@ -107,11 +112,7 @@ public class ClasspathResourceChangedNotifier implements Disposable {
         }
         if (librariesChanged) {
             // Java Libraries has changed
-            if (processBeforeLibrariesChanged.isEmpty() || ApplicationManager.getApplication().isUnitTestMode()) {
-                // No preprocessor or Test context, send directly the librariesChanged event.
-                for (var runnable : processBeforeLibrariesChanged) {
-                    runnable.run(new EmptyProgressIndicator());
-                }
+            if (ApplicationManager.getApplication().isUnitTestMode()) {
                 // Send the libraries changed event
                 project.getMessageBus().syncPublisher(ClasspathResourceChangedManager.TOPIC).librariesChanged();
                 librariesChanged = false;
@@ -125,9 +126,6 @@ public class ClasspathResourceChangedNotifier implements Disposable {
                                 // Execute preprocessor
                                 progressIndicator.setIndeterminate(false);
                                 progressIndicator.checkCanceled();
-                                for (var runnable : processBeforeLibrariesChanged) {
-                                    runnable.run(progressIndicator);
-                                }
                             } finally {
                                 // Send the libraries changed event
                                 project.getMessageBus().syncPublisher(ClasspathResourceChangedManager.TOPIC).librariesChanged();
@@ -152,7 +150,7 @@ public class ClasspathResourceChangedNotifier implements Disposable {
         this.disposed = true;
         if (debounceTask != null) {
             debounceTask.cancel();
-            debounceTask =null;
+            debounceTask = null;
         }
         if (debounceTimer != null) {
             debounceTimer.cancel();

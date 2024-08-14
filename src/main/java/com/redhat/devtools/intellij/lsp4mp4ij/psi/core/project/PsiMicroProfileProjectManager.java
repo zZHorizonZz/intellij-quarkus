@@ -11,7 +11,6 @@ package com.redhat.devtools.intellij.lsp4mp4ij.psi.core.project;
 
 import com.intellij.ProjectTopics;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.module.ModuleManager;
 import com.intellij.openapi.project.ModuleListener;
@@ -21,6 +20,7 @@ import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.util.messages.MessageBusConnection;
 import com.redhat.devtools.intellij.lsp4mp4ij.classpath.ClasspathResourceChangedManager;
+import com.redhat.devtools.intellij.quarkus.QuarkusPluginDisposable;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
@@ -37,8 +37,8 @@ public final class PsiMicroProfileProjectManager implements Disposable {
 
 	private static final String JAVA_FILE_EXTENSION = "java";
 
-	public static PsiMicroProfileProjectManager getInstance(Project project) {
-		return ServiceManager.getService(project, PsiMicroProfileProjectManager.class);
+	public static PsiMicroProfileProjectManager getInstance(@NotNull Project project) {
+		return project.getService(PsiMicroProfileProjectManager.class);
 	}
 
 	private final MessageBusConnection connection;
@@ -85,7 +85,7 @@ public final class PsiMicroProfileProjectManager implements Disposable {
 	private PsiMicroProfileProjectManager(Project project) {
 		this.project = project;
 		microprofileProjectListener = new MicroProfileProjectListener();
-		connection = project.getMessageBus().connect(project);
+		connection = project.getMessageBus().connect(QuarkusPluginDisposable.getInstance(project));
 		connection.subscribe(ClasspathResourceChangedManager.TOPIC, microprofileProjectListener);
 		connection.subscribe(ProjectTopics.MODULES, microprofileProjectListener);
 	}

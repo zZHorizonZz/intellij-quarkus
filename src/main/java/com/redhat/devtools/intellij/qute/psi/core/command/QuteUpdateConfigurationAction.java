@@ -20,7 +20,6 @@ import com.intellij.codeInsight.daemon.HighlightDisplayKey;
 import com.intellij.codeInspection.InspectionProfile;
 import com.intellij.codeInspection.ex.InspectionProfileImpl;
 import com.intellij.codeInspection.ex.InspectionToolWrapper;
-import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
@@ -29,12 +28,13 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.profile.codeInspection.InspectionProfileManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.FakePsiElement;
-import com.redhat.devtools.intellij.lsp4ij.LSPIJUtils;
-import com.redhat.devtools.intellij.lsp4ij.commands.CommandExecutor;
-import com.redhat.devtools.intellij.lsp4ij.inspections.AbstractDelegateInspectionWithExclusions;
-import com.redhat.devtools.intellij.lsp4ij.operations.diagnostics.SeverityMapping;
 import com.redhat.devtools.intellij.qute.psi.core.inspections.QuteGlobalInspection;
 import com.redhat.devtools.intellij.qute.psi.core.inspections.QuteUndefinedObjectInspection;
+import com.redhat.devtools.lsp4ij.LSPIJUtils;
+import com.redhat.devtools.lsp4ij.commands.LSPCommand;
+import com.redhat.devtools.lsp4ij.commands.LSPCommandAction;
+import com.redhat.devtools.lsp4ij.inspections.AbstractDelegateInspectionWithExclusions;
+import com.redhat.devtools.lsp4ij.features.diagnostics.SeverityMapping;
 import org.eclipse.lsp4j.Command;
 import org.eclipse.lsp4j.DiagnosticSeverity;
 import org.jetbrains.annotations.NotNull;
@@ -46,18 +46,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class QuteUpdateConfigurationAction extends AnAction {
+public class QuteUpdateConfigurationAction extends LSPCommandAction {
     private final Map<String, ConfigurationUpdater> updaters = new HashMap<>();
 
     public QuteUpdateConfigurationAction() {
         updaters.put("qute.validation.enabled", new InspectionEnabler(QuteGlobalInspection.ID));
         updaters.put("qute.validation.excluded", new InspectionExclusionsUpdater(QuteGlobalInspection.ID));
-        updaters.put("qute.validation.undefinedObject.severity",  new InspectionSeverityUpdater(QuteUndefinedObjectInspection.ID));
+        updaters.put("qute.validation.undefinedObject.severity", new InspectionSeverityUpdater(QuteUndefinedObjectInspection.ID));
     }
 
     @Override
-    public void actionPerformed(@NotNull AnActionEvent e) {
-        JsonObject configUpdate = getConfigUpdate(e);
+    protected void commandPerformed(@NotNull LSPCommand command, @NotNull AnActionEvent e) {
+        JsonObject configUpdate = getConfigUpdate(command);
         if (configUpdate != null && e.getProject() != null) {
             String section = configUpdate.get("section").getAsString();
             ConfigurationUpdater updater = updaters.get(section);
@@ -68,23 +68,16 @@ public class QuteUpdateConfigurationAction extends AnAction {
         }
     }
 
-    private @Nullable JsonObject getConfigUpdate(@NotNull AnActionEvent e) {
-        @Nullable Command command = e.getData(CommandExecutor.LSP_COMMAND);
-        if (command == null) {
-            return null;
-        }
-        List<Object> arguments = command.getArguments();
-        if (arguments != null && !arguments.isEmpty()) {
-            Object arg = arguments.get(0);
-            if (arg instanceof JsonObject) {
-                return (JsonObject) arg;
-            }
+    private @Nullable JsonObject getConfigUpdate(@NotNull LSPCommand command) {
+        Object arg = command.getArgumentAt(0);
+        if (arg instanceof JsonObject) {
+            return (JsonObject) arg;
         }
         return null;
     }
 
     interface ConfigurationUpdater {
-        void updateConfiguration(Project project,  JsonObject value);
+        void updateConfiguration(Project project, JsonObject value);
     }
 
     private static class InspectionSeverityUpdater implements ConfigurationUpdater {
@@ -123,7 +116,7 @@ public class QuteUpdateConfigurationAction extends AnAction {
     private static class InspectionExclusionsUpdater extends InspectionSeverityUpdater {
 
         InspectionExclusionsUpdater(String inspectionId) {
-            super(inspectionId) ;
+            super(inspectionId);
         }
 
         @Override
@@ -147,8 +140,9 @@ public class QuteUpdateConfigurationAction extends AnAction {
 
         /**
          * returns file value path relative to the given project
+         *
          * @param project the reference project
-         * @param value the file path URI to get a relative path from
+         * @param value   the file path URI to get a relative path from
          * @return file value path relative to the given project
          */
         private String sanitize(@NotNull Project project, @NotNull String value) {
@@ -192,7 +186,7 @@ public class QuteUpdateConfigurationAction extends AnAction {
             String scopeUri = value.get("scopeUri").getAsString();
             VirtualFile resource = LSPIJUtils.findResourceFor(scopeUri);
             if (resource != null) {
-                @Nullable Module module = LSPIJUtils.getModule(resource);
+                @Nullable Module module = LSPIJUtils.getModule(resource, project);
                 if (module != null) {
                     String modulePath = LSPIJUtils.toUri(module).resolve("**").toString();
                     addToExclusions(project, modulePath);

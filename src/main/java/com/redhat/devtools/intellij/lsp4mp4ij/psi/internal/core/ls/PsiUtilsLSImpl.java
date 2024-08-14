@@ -15,8 +15,8 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.ModuleRootManager;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.psi.JavaPsiFacade;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
@@ -24,16 +24,19 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiMember;
 import com.intellij.psi.PsiMethod;
+import com.intellij.psi.impl.light.LightRecordField;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.psi.util.ClassUtil;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.JsonRpcHelpers;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.PsiUtils;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.utils.IPsiUtils;
 import com.redhat.devtools.intellij.quarkus.javadoc.JavadocContentAccess;
-import com.redhat.devtools.intellij.lsp4ij.LSPIJUtils;
+import com.redhat.devtools.lsp4ij.LSPIJUtils;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4mp.commons.ClasspathKind;
 import org.eclipse.lsp4mp.commons.DocumentFormat;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +81,7 @@ public class PsiUtilsLSImpl implements IPsiUtils {
 
     @Override
     public Module getModule(VirtualFile file) {
-        return LSPIJUtils.getModule(file);
+        return LSPIJUtils.getModule(file, project);
     }
 
     @Override
@@ -89,8 +92,8 @@ public class PsiUtilsLSImpl implements IPsiUtils {
 
     @Override
     public PsiClass findClass(Module module, String className) {
-        JavaPsiFacade facade = JavaPsiFacade.getInstance(module.getProject());
-        return facade.findClass(className, GlobalSearchScope.allScope(module.getProject()));
+        return ClassUtil.findPsiClass(PsiManager.getInstance(module.getProject()), className, null, false,
+                GlobalSearchScope.allScope(module.getProject()));
     }
 
     @Override
@@ -100,7 +103,32 @@ public class PsiUtilsLSImpl implements IPsiUtils {
 
     @Override
     public Location toLocation(PsiElement psiMember) {
-        return LSPIJUtils.toLocation(psiMember);
+        PsiElement sourceElement = getNavigationElement(psiMember);
+
+        if (sourceElement != null) {
+            PsiFile file = sourceElement.getContainingFile();
+            Document document = PsiDocumentManager.getInstance(psiMember.getProject()).getDocument(file);
+            if (document != null) {
+                TextRange range = sourceElement.getTextRange();
+                return toLocation(file, LSPIJUtils.toRange(range, document));
+            }
+        }
+        return null;
+    }
+
+    public static Location toLocation(PsiFile file, Range range) {
+        return toLocation(file.getVirtualFile(), range);
+    }
+
+    public static Location toLocation(VirtualFile file, Range range) {
+        return new Location(LSPIJUtils.toUriAsString(file), range);
+    }
+
+    private static @Nullable PsiElement getNavigationElement(PsiElement psiMember) {
+        if (psiMember instanceof LightRecordField psiRecord) {
+            psiMember = psiRecord.getRecordComponent();
+        }
+        return psiMember.getNavigationElement();
     }
 
     @Override
@@ -118,7 +146,7 @@ public class PsiUtilsLSImpl implements IPsiUtils {
 
     @Override
     public String getJavadoc(PsiMember method, com.redhat.qute.commons.DocumentFormat documentFormat) {
-        boolean markdown = DocumentFormat.Markdown.equals(documentFormat);
+        boolean markdown = DocumentFormat.Markdown.name().toLowerCase().equals(documentFormat.name().toLowerCase());
         Reader reader = markdown ? JavadocContentAccess.getMarkdownContentReader(method)
                 : JavadocContentAccess.getPlainTextContentReader(method);
         return reader != null ? toString(reader) : null;

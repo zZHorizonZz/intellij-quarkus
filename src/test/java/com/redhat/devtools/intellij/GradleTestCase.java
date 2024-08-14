@@ -11,10 +11,9 @@
 package com.redhat.devtools.intellij;
 
 import com.intellij.openapi.module.Module;
-import com.intellij.openapi.module.ModuleManager;
-import com.intellij.openapi.progress.EmptyProgressIndicator;
-import com.redhat.devtools.intellij.quarkus.QuarkusProjectService;
-import com.redhat.devtools.intellij.quarkus.gradle.AbstractGradleToolDelegate;
+import com.intellij.openapi.module.ModuleUtilCore;
+import com.intellij.openapi.util.Couple;
+import com.redhat.devtools.intellij.quarkus.buildtool.gradle.AbstractGradleToolDelegate;
 import org.gradle.tooling.GradleConnector;
 import org.gradle.tooling.ProjectConnection;
 import org.gradle.tooling.model.idea.IdeaProject;
@@ -44,7 +43,7 @@ public abstract class GradleTestCase extends GradleImportingTestCase {
         try (ProjectConnection connection = GradleConnector.newConnector().forProjectDirectory(new File(path)).connect()) {
             Optional<IdeaSingleEntryLibraryDependency> dependency = (Optional<IdeaSingleEntryLibraryDependency>) connection.getModel(IdeaProject.class).getModules().stream().flatMap(module -> module.getDependencies().stream()).
                     filter(dep -> dep instanceof IdeaSingleEntryLibraryDependency).
-                    map(dep -> (IdeaSingleEntryLibraryDependency)dep).
+                    map(dep -> (IdeaSingleEntryLibraryDependency) dep).
                     filter(library -> isCoordinateSame((IdeaSingleEntryLibraryDependency) library, groupId, artifactId, version)).findFirst();
             if (dependency.isPresent()) {
                 return dependency.get().getFile();
@@ -70,18 +69,17 @@ public abstract class GradleTestCase extends GradleImportingTestCase {
         return new File(System.getProperty("user.home") + File.separatorChar + ".m2" + File.separator + "repository");
     }
 
-    @Override
-    protected void importProject() {
-        super.importProject();
-//        for(Module m : ModuleManager.getInstance(myProject).getModules()) {
-//            setupJdkForModule(m.getName());
-//        }
-        QuarkusProjectService.getInstance(myProject).processModules(new EmptyProgressIndicator());
-    }
-
     @Parameterized.Parameters(name = "{index}: with Gradle-{0}")
     public static Collection<Object[]> data() {
-        return Arrays.asList(new Object[][] {{"6.0"}});
+        return Arrays.asList(new Object[][]{{"8.6"}});
     }
 
+    protected String getJavaFileUri(String path, Module module) {
+        return new File(ModuleUtilCore.getModuleDirPath(module), path).toURI().toString();
+    }
+
+    @Override
+    protected void handleDeprecationError(Couple<String> errorInfo) {
+        //Don't fail the test -yet- if Gradle is complaining about deprecated features
+    }
 }

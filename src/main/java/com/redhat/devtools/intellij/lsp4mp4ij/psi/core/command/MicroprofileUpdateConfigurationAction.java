@@ -17,17 +17,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.intellij.codeInspection.InspectionProfile;
 import com.intellij.codeInspection.ex.InspectionToolWrapper;
-import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Key;
 import com.intellij.profile.codeInspection.InspectionProfileManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.FakePsiElement;
-import com.redhat.devtools.intellij.lsp4ij.commands.CommandExecutor;
-import com.redhat.devtools.intellij.lsp4ij.inspections.AbstractDelegateInspectionWithExclusions;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.inspections.MicroProfilePropertiesUnassignedInspection;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.inspections.MicroProfilePropertiesUnknownInspection;
+import com.redhat.devtools.lsp4ij.commands.LSPCommand;
+import com.redhat.devtools.lsp4ij.commands.LSPCommandAction;
+import com.redhat.devtools.lsp4ij.inspections.AbstractDelegateInspectionWithExclusions;
 import org.eclipse.lsp4j.Command;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,7 +39,7 @@ import java.util.Map;
 /**
  * Action for updating the Microprofile configuration, typically requested by LSP4MP.
  */
-public class MicroprofileUpdateConfigurationAction extends AnAction {
+public class MicroprofileUpdateConfigurationAction extends LSPCommandAction {
     private final Map<String, ConfigurationUpdater> updaters = new HashMap<>();
 
     public MicroprofileUpdateConfigurationAction() {
@@ -48,36 +48,29 @@ public class MicroprofileUpdateConfigurationAction extends AnAction {
     }
 
     @Override
-    public void actionPerformed(@NotNull AnActionEvent e) {
-        JsonObject configUpdate = getConfigUpdate(e);
+    protected void commandPerformed(@NotNull LSPCommand command, @NotNull AnActionEvent e) {
+        JsonObject configUpdate = getConfigUpdate(command);
         if (configUpdate != null && e.getProject() != null) {
             String section = configUpdate.get("section").getAsString();
             ConfigurationUpdater updater = updaters.get(section);
             if (updater == null) {
-                throw new UnsupportedOperationException("Updating "+section+" is not supported yet!");
+                throw new UnsupportedOperationException("Updating " + section + " is not supported yet!");
             }
             JsonElement value = configUpdate.get("value");
             updater.updateConfiguration(e.getProject(), value);
         }
     }
 
-    private @Nullable JsonObject getConfigUpdate(@NotNull AnActionEvent e) {
-        @Nullable Command command = e.getData(CommandExecutor.LSP_COMMAND);
-        if (command == null) {
-            return null;
-        }
-        List<Object> arguments = command.getArguments();
-        if (arguments != null && !arguments.isEmpty()) {
-            Object arg = arguments.get(0);
-            if (arg instanceof JsonObject) {
-                return (JsonObject) arg;
-            }
+    private @Nullable JsonObject getConfigUpdate(@NotNull LSPCommand command) {
+        Object arg = command.getArgumentAt(0);
+        if (arg instanceof JsonObject) {
+            return (JsonObject) arg;
         }
         return null;
     }
 
     interface ConfigurationUpdater {
-        void updateConfiguration(Project project,  JsonElement value);
+        void updateConfiguration(Project project, JsonElement value);
     }
 
     private static class InspectionConfigurationUpdater implements ConfigurationUpdater {
@@ -95,7 +88,7 @@ public class MicroprofileUpdateConfigurationAction extends AnAction {
             }
         }
 
-        private void updateConfiguration(Project project,  @NotNull String value) {
+        private void updateConfiguration(Project project, @NotNull String value) {
             InspectionProfile profile = InspectionProfileManager.getInstance(project).getCurrentProfile();
             InspectionToolWrapper<?, ?> toolWrapper = profile.getInspectionTool(inspectionId, project);
             if (toolWrapper != null && toolWrapper.getTool() instanceof AbstractDelegateInspectionWithExclusions) {

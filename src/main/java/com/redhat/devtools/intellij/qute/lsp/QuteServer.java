@@ -11,18 +11,19 @@
 package com.redhat.devtools.intellij.qute.lsp;
 
 import com.intellij.ide.plugins.IdeaPluginDescriptor;
-import com.intellij.ide.plugins.PluginManager;
+import com.intellij.ide.plugins.PluginManagerCore;
 import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.project.Project;
-import com.redhat.devtools.intellij.lsp4ij.server.JavaProcessCommandBuilder;
-import com.redhat.devtools.intellij.lsp4ij.server.ProcessStreamConnectionProvider;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder;
+import com.redhat.devtools.lsp4ij.server.ProcessStreamConnectionProvider;
 import com.redhat.devtools.intellij.quarkus.TelemetryService;
 import com.redhat.devtools.intellij.qute.settings.UserDefinedQuteSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -39,11 +40,14 @@ public class QuteServer extends ProcessStreamConnectionProvider {
 
     public QuteServer(Project project) {
         this.project = project;
-        IdeaPluginDescriptor descriptor = PluginManager.getPlugin(PluginId.getId("com.redhat.devtools.intellij.quarkus"));
-        File quteServerPath = new File(descriptor.getPath(), "lib/server/com.redhat.qute.ls-uber.jar");
+        IdeaPluginDescriptor descriptor = PluginManagerCore.getPlugin(PluginId.getId("com.redhat.devtools.intellij.quarkus"));
+        assert descriptor != null;
+        Path pluginPath = descriptor.getPluginPath();
+        assert pluginPath != null;
+        Path quteServerPath = pluginPath.toAbsolutePath().resolve("lib/server/com.redhat.qute.ls-uber.jar");
 
         List<String> commands = new JavaProcessCommandBuilder(project, "qute")
-                .setJar(quteServerPath.getAbsolutePath())
+                .setJar(quteServerPath.toString())
                 .create();
         commands.add("-DrunAsync=true");
         super.setCommands(commands);
@@ -57,7 +61,7 @@ public class QuteServer extends ProcessStreamConnectionProvider {
     }
 
     @Override
-    public Object getInitializationOptions(URI rootUri) {
+    public Object getInitializationOptions(VirtualFile rootUri) {
         Map<String, Object> root = new HashMap<>();
         Map<String, Object> settings = UserDefinedQuteSettings.getInstance(project).toSettingsForQuteLS();
         Map<String, Object> extendedClientCapabilities = new HashMap<>();

@@ -16,7 +16,6 @@ package com.redhat.devtools.intellij.lsp4mp4ij.classpath;
 import com.intellij.ProjectTopics;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.components.ServiceManager;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.roots.libraries.LibraryTablesRegistrar;
@@ -26,9 +25,9 @@ import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.PsiManager;
 import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.util.messages.Topic;
+import com.redhat.devtools.intellij.quarkus.QuarkusPluginDisposable;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,7 +36,7 @@ import java.util.Set;
  *
  * <code>
  * ClasspathResourceChangeManager.Listener myListener = ...
- * project.getMessageBus().connect(project).subscribe(ClasspathResourceChangeManager.TOPIC, myListener);
+ * project.getMessageBus().connect(QuarkusPluginDisposable.getInstance(project)).subscribe(ClasspathResourceChangeManager.TOPIC, myListener);
  * </code>
  *
  *
@@ -56,8 +55,8 @@ public class ClasspathResourceChangedManager implements Disposable {
 	private final MessageBusConnection appConnection;
 	private final ClasspathResourceChangedListener listener;
 
-	public static ClasspathResourceChangedManager getInstance(Project project) {
-		return ServiceManager.getService(project, ClasspathResourceChangedManager.class);
+	public static ClasspathResourceChangedManager getInstance(@NotNull Project project) {
+		return project.getService(ClasspathResourceChangedManager.class);
 	}
 
 	public interface Listener {
@@ -69,15 +68,12 @@ public class ClasspathResourceChangedManager implements Disposable {
 
 	private final Project project;
 
-	private final List<RunnableProgress> preprocessors;
-
 	public ClasspathResourceChangedManager(Project project) {
 		this.project = project;
-		this.preprocessors = new ArrayList<>();
 		// Send source files changed in debounce mode
-		this.resourceChangedNotifier = new ClasspathResourceChangedNotifier(project, preprocessors);
+		this.resourceChangedNotifier = new ClasspathResourceChangedNotifier(project);
 		listener = new ClasspathResourceChangedListener(this);
-		projectConnection = project.getMessageBus().connect();
+		projectConnection = project.getMessageBus().connect(QuarkusPluginDisposable.getInstance(project));
 		// Track end of Java libraries update
 		LibraryTablesRegistrar.getInstance().getLibraryTable(project).addListener(listener);
 		// Track update of Psi Java, properties files
@@ -85,7 +81,7 @@ public class ClasspathResourceChangedManager implements Disposable {
 		// Track modules changes
 		projectConnection.subscribe(ProjectTopics.MODULES, listener);
 		// Track delete, create, update of file
-		appConnection = ApplicationManager.getApplication().getMessageBus().connect(project);
+		appConnection = ApplicationManager.getApplication().getMessageBus().connect(QuarkusPluginDisposable.getInstance());
 		appConnection.subscribe(VirtualFileManager.VFS_CHANGES, listener);
 	}
 
@@ -104,14 +100,5 @@ public class ClasspathResourceChangedManager implements Disposable {
 
 	ClasspathResourceChangedNotifier getResourceChangedNotifier() {
 		return resourceChangedNotifier;
-	}
-
-	/**
-	 * Add a preprocessor to update classpatch when a library changed before sending the {@link Listener#librariesChanged()} event.
-	 *
-	 * @param preprocessor the preprocessor to add.
-	 */
-	public void addPreprocessor(RunnableProgress preprocessor) {
-		preprocessors.add(preprocessor);
 	}
 }

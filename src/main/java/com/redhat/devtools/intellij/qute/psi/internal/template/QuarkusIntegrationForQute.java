@@ -24,7 +24,7 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.roots.ModuleRootManager;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.utils.IPsiUtils;
-import com.redhat.devtools.intellij.lsp4ij.LSPIJUtils;
+import com.redhat.devtools.lsp4ij.LSPIJUtils;
 import com.redhat.devtools.intellij.qute.psi.internal.template.datamodel.DataModelProviderRegistry;
 
 import com.redhat.qute.commons.QuteProjectScope;
@@ -125,9 +125,6 @@ public class QuarkusIntegrationForQute {
 			return s.hasNext() ? s.next() : "";
 		}
 	}
-
-	private static final String JDT_SCHEME = "jdt";
-	private static final String CONTENTS_AUTHORITY = "jarentry";
 
 	// see
 	// https://github.com/microsoft/vscode-java-dependency/blob/27c306b770c23b1eba1f9a7c3e70d2793baced68/jdtls.ext/com.microsoft.jdtls.ext.core/src/com/microsoft/jdtls/ext/core/ExtUtils.java#L39

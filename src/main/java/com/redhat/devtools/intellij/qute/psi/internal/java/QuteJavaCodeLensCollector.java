@@ -15,7 +15,7 @@ import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
-import com.redhat.devtools.intellij.lsp4ij.LSPIJUtils;
+import com.redhat.devtools.lsp4ij.LSPIJUtils;
 import com.redhat.devtools.intellij.lsp4mp4ij.psi.core.utils.IPsiUtils;
 import com.redhat.devtools.intellij.qute.psi.QuteCommandConstants;
 import com.redhat.devtools.intellij.qute.psi.utils.PsiQuteProjectUtils;
@@ -81,7 +81,7 @@ public class QuteJavaCodeLensCollector extends AbstractQuteTemplateLinkCollector
             GenerateTemplateInfo info = new GenerateTemplateInfo();
             info.setParameters(parameters);
             info.setProjectUri(PsiQuteProjectUtils.getProjectURI(utils.getModule()));
-            info.setTemplateFileUri(getVirtualFileUrl(utils.getModule(), templateUri, ""));
+            info.setTemplateFileUri(getVirtualFileUrl(utils.getModule(), templateUri));
             info.setTemplateFilePath(templateUri);
             command = new Command(MessageFormat.format(QUTE_COMMAND_GENERATE_TEMPLATE_MESSAGE, templateUri), //
                     QuteCommandConstants.QUTE_COMMAND_GENERATE_TEMPLATE_FILE, Arrays.asList(info));

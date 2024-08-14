@@ -20,7 +20,7 @@ import com.intellij.ui.*;
 import com.intellij.ui.components.JBList;
 import com.intellij.ui.components.JBScrollPane;
 import com.intellij.util.ui.JBUI;
-import com.redhat.devtools.intellij.lsp4ij.internal.StringUtils;
+import com.redhat.devtools.lsp4ij.internal.StringUtils;
 import com.redhat.devtools.intellij.quarkus.QuarkusConstants;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -53,6 +53,7 @@ public class QuarkusExtensionsStep extends ModuleWizardStep implements Disposabl
 
     private JPanel outerPanel;
     private final WizardContext wizardContext;
+    private SearchTextField filter;
 
     private static class ExtensionsTreeCellRenderer extends CheckboxTree.CheckboxTreeCellRenderer {
 
@@ -135,7 +136,7 @@ public class QuarkusExtensionsStep extends ModuleWizardStep implements Disposabl
             JLabel label1 = new JLabel("Filter extensions");
             label1.setAlignmentX(Component.LEFT_ALIGNMENT);
             panel.add(label1);
-            SearchTextField filter = new SearchTextField() {
+            filter = new SearchTextField() {
                 @Override
                 public Dimension getMaximumSize() {
                     Dimension maxSize = super.getMaximumSize();
@@ -223,6 +224,12 @@ public class QuarkusExtensionsStep extends ModuleWizardStep implements Disposabl
         return outerPanel;
     }
 
+
+    @Override
+    public JComponent getPreferredFocusedComponent() {
+        return filter;
+    }
+
     private KeyListener onSelectedExtensionsKeyPressed(List<QuarkusCategory> categories, CheckboxTree extensionsTree, JList<QuarkusExtension> selectedExtensions) {
         return new KeyAdapter() {
             @Override
@@ -257,7 +264,6 @@ public class QuarkusExtensionsStep extends ModuleWizardStep implements Disposabl
                             // so we force it manually
                             selectedExtensions.setModel(new SelectedExtensionsModel(categories));
                         }
-                        ;
                     }
                 }
             }

@@ -13,9 +13,10 @@ package com.redhat.devtools.intellij.quarkus.lsp;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.redhat.devtools.intellij.lsp4ij.AbstractDocumentMatcher;
-import com.redhat.devtools.intellij.lsp4ij.LSPIJUtils;
+import com.redhat.devtools.lsp4ij.AbstractDocumentMatcher;
+import com.redhat.devtools.lsp4ij.LSPIJUtils;
 import com.redhat.devtools.intellij.quarkus.QuarkusModuleUtil;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Base class for Quarkus document matcher which checks that the file belongs to a Quarkus project.
@@ -23,8 +24,8 @@ import com.redhat.devtools.intellij.quarkus.QuarkusModuleUtil;
 public class AbstractQuarkusDocumentMatcher extends AbstractDocumentMatcher {
 
     @Override
-    public boolean match(VirtualFile file, Project fileProject) {
-        Module module = LSPIJUtils.getModule(file);
+    public boolean match(@NotNull VirtualFile file, @NotNull Project fileProject) {
+        Module module = LSPIJUtils.getModule(file, fileProject);
         return module != null && QuarkusModuleUtil.isQuarkusModule(module);
     }
 }
